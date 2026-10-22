@@ -6,7 +6,8 @@ internal sealed class QuicEngine : IDisposable
 {
     private IntPtr handle;
     private readonly bool experimental;
-    public QuicEngine(bool experimental=true){this.experimental=experimental;}
+    private readonly AiRoutes? ai;
+    public QuicEngine(bool experimental=true,AiRoutes? ai=null){this.experimental=experimental;this.ai=ai;}
     public event Action<string>? Log;
     public void Run(CancellationToken ct)
     {
@@ -26,7 +27,9 @@ internal sealed class QuicEngine : IDisposable
                     bool v6=packet[0]>>4==6;
                     bool valid=v6?packet[6]==17:(packet[9]==17 && (BinaryPrimitives.ReadUInt16BigEndian(packet.AsSpan(6))&0x3fff)==0);
                     int payload=udp+8;
-                    if(valid&&count>payload&&VideoEndpoints.IsVideoEndpoint(new System.Net.IPAddress(packet.AsSpan(v6?24:16,v6?16:4)).ToString()))
+                    string? destination=valid?new System.Net.IPAddress(packet.AsSpan(v6?24:16,v6?16:4)).ToString():null;
+                    bool aiEndpoint=destination is not null&&ai?.IsEndpoint(destination)==true;
+                    if(valid&&count>payload&&(aiEndpoint||VideoEndpoints.IsVideoEndpoint(destination!)))
                     {
                         string flow="tcp-fallback:"+Convert.ToHexString(packet.AsSpan(v6?8:12,v6?32:8))+Convert.ToHexString(packet.AsSpan(udp,4));
                         if(!seen.TryGetValue(flow,out var rejected)||DateTime.UtcNow-rejected>TimeSpan.FromSeconds(1))
@@ -34,7 +37,7 @@ internal sealed class QuicEngine : IDisposable
                             seen[flow]=DateTime.UtcNow;
                             byte[] inbound=(byte[])addr.Clone();inbound[10]&=0xfd;
                             Send(PortUnreachable(packet.AsSpan(0,(int)count),udp,v6),inbound);
-                            Log?.Invoke("VIDEO_QUIC_FALLBACK endpoint="+new System.Net.IPAddress(packet.AsSpan(v6?24:16,v6?16:4)));
+                            Log?.Invoke((aiEndpoint?"AI_QUIC_FALLBACK":"VIDEO_QUIC_FALLBACK")+" endpoint="+destination);
                         }
                         continue;
                     }

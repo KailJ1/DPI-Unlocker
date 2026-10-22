@@ -29,7 +29,7 @@ internal static class ProbeRunner
                 return new(target,ok?"PING OK":"PING "+reply.Status,ok?reply.RoundtripTime:timer.ElapsedMilliseconds,"Только ICMP. Ответ DNS-сервера и DNS-запросы не проверяются.",ok);
             }
             using var request=new HttpRequestMessage(HttpMethod.Get,target.Address);
-            request.Headers.UserAgent.ParseAdd("DPI-Unlocker-Diagnostics/0.1");
+            request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
             using var response=await http.SendAsync(request,HttpCompletionOption.ResponseHeadersRead,ct);
             int code=(int)response.StatusCode;
             string detail=code switch

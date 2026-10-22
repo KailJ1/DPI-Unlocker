@@ -50,6 +50,32 @@ internal static class SelfTests
             Assert(BinaryPrimitives.ReadUInt16BigEndian(fragments[0].AsSpan(6))==0x2000&&BinaryPrimitives.ReadUInt16BigEndian(fragments[1].AsSpan(6))==2,"Discord IPv4 fragment offsets");
             discovery[28]=0xff;Assert(DiscordVoiceEngine.Fragment(discovery).Length==1,"Non-discovery UDP preserved");
             byte[] dns=DnsWire.Query("example.com");Assert(DnsWire.Question(dns)?.Name=="example.com","DNS query parse");
+            var onlyGemini=new AiRoutes(true,false,false);var onlyChat=new AiRoutes(false,true,false);var onlyClaude=new AiRoutes(false,false,true);
+            Assert(onlyGemini.Matches("GEMINI.GOOGLE.COM")&&onlyGemini.Matches("proactivebackend-pa.googleapis.com")&&onlyGemini.Matches("geminiweb-pa.clients6.google.com")&&!onlyGemini.Matches("gemini.google.com.evil.example")&&!onlyGemini.Matches("www.google.com")&&!onlyGemini.Matches("chatgpt.com"),"Gemini Smart DNS stays on exact domain");
+            Assert(onlyChat.Matches("chatgpt.com")&&onlyChat.Matches("auth.openai.com")&&onlyChat.Matches("cdn.oaistatic.com")&&onlyChat.Matches("files.oaiusercontent.com")&&onlyChat.Matches("cdn.platform.openai.com")&&onlyChat.Matches("codex-cloud-backend.chatgpt.com")&&!onlyChat.Matches("notchatgpt.com")&&!onlyChat.Matches("chatgpt.com.evil.example")&&!onlyChat.Matches("api.openai.com")&&!onlyChat.Matches("gemini.google.com"),"ChatGPT Smart DNS domain boundaries and API isolation");
+            Assert(onlyClaude.Matches("claude.ai")&&onlyClaude.Matches("claude.com")&&onlyClaude.Matches("platform.claude.com")&&onlyClaude.Matches("anthropic.com")&&onlyClaude.Matches("api.anthropic.com")&&!onlyClaude.Matches("notclaude.ai")&&!onlyClaude.Matches("gemini.google.com"),"Claude Smart DNS domain boundaries");
+            Assert(!new AiRoutes(false,false,false).Enabled&&!new AiRoutes(false,false,false).Matches("gemini.google.com"),"Disabled Smart DNS preserves existing routes");
+            var allAi=new AiRoutes(true);
+            Assert(allAi.Enabled&&allAi.Matches("claude.ai")&&allAi.Matches("chatgpt.com")&&allAi.Matches("gemini.google.com"),"Unified AI Smart DNS matches all neural networks");
+            var oldSettings=System.Text.Json.JsonSerializer.Deserialize<EngineSettings>("{\"Mode\":-1,\"Telegram\":true,\"Doh\":true,\"Quic\":false,\"DiscordVoice\":true}")!;
+            Assert(!oldSettings.Gemini&&!oldSettings.ChatGpt&&!oldSettings.Claude&&!oldSettings.Ai&&!oldSettings.EffectiveAi&&oldSettings.SmartDns==0,"Old service settings load with Smart DNS disabled");
+            var aiSettings=oldSettings with{Gemini=true,ChatGpt=true,Claude=true,Ai=true,SmartDns=2};
+            Assert(System.Text.Json.JsonSerializer.Deserialize<EngineSettings>(System.Text.Json.JsonSerializer.Serialize(aiSettings))==aiSettings&&aiSettings.EffectiveAi,"Smart DNS service settings round trip");
+            Assert(UpdateChecker.TryParseVersion("v1.0.6",out var v1)&&v1==new Version(1,0,6),"Update version v1.0.6 parse");
+            Assert(UpdateChecker.TryParseVersion("1.0.7",out var v2)&&v2==new Version(1,0,7),"Update version 1.0.7 parse");
+            Assert(UpdateChecker.TryParseVersion("v1.0.8-win-x64",out var v3)&&v3==new Version(1,0,8),"Update version suffix parse");
+            Assert(new Version(1,0,8)>new Version(1,0,7),"Newer version check logic");
+            Assert(!(new Version(1,0,6)>new Version(1,0,7)),"Older version rejected by update check");
+            foreach(byte[] originalHosts in new[]{Encoding.UTF8.GetBytes("# пользовательские записи\r\n127.0.0.1 localhost\r\n"),Encoding.UTF8.GetBytes("127.0.0.1 custom.local"),new byte[]{0xef,0xbb,0xbf,35,32,0xff,13,10}})
+            {
+                var entries=new Dictionary<string,string[]>(){{"gemini.google.com",new[]{"83.217.211.149"}}};
+                byte[] merged=AiHostsFile.Merge(originalHosts,entries);
+                Assert(AiHostsFile.Merge(merged,new Dictionary<string,string[]>()).SequenceEqual(originalHosts),"Smart DNS hosts removal preserves original bytes and newline");
+                Assert(AiHostsFile.Merge(merged,entries).SequenceEqual(merged),"Smart DNS hosts refresh is idempotent");
+            }
+            bool malformedHostsRejected=false;
+            try{AiHostsFile.Merge(Encoding.ASCII.GetBytes("# BEGIN DPI-Unlocker Smart DNS\r\n"),new Dictionary<string,string[]>());}catch(IOException){malformedHostsRejected=true;}
+            Assert(malformedHostsRejected,"Incomplete managed hosts block is never overwritten");
             byte[] dnsAnswer=dns.Concat(new byte[]{0xc0,0x0c,0,1,0,1,0,0,0,60,0,4,74,125,8,170}).ToArray();dnsAnswer[2]=0x81;dnsAnswer[3]=0x80;dnsAnswer[7]=1;
             Assert(DnsWire.AddressAnswers(dnsAnswer).SequenceEqual(new[]{"74.125.8.170"}),"Compressed DNS IPv4 CDN discovery");
             for(int length=0;length<dnsAnswer.Length;length++)DnsWire.AddressAnswers(dnsAnswer[..length]);

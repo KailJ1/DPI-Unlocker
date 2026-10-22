@@ -48,6 +48,7 @@ internal static class Program
             }
         }
         if (args.Contains("--self-test")) return SelfTests.Run();
+        if (args.Contains("--ai-dns-test")) return AiDnsTest.Run().GetAwaiter().GetResult();
         if(args.Contains("--telegram-bridge-test"))return TelegramBridgeTest.Run(args.Contains("--sustained")).GetAwaiter().GetResult();
         if(args.Contains("--telegram-test"))return TelegramTest.Run().GetAwaiter().GetResult();
         if(args.Contains("--telegram-web-test"))return TelegramWebTest.Run().GetAwaiter().GetResult();

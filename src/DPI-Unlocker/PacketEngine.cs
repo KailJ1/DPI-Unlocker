@@ -41,9 +41,10 @@ internal sealed class PacketEngine : IDisposable
     private long received,changed,confirmed;
     public event Action<string>? Log;
     private sealed class FlowState { public uint Sequence; public int Mode; public string Host="",Destination=""; public DateTime Seen; public bool Responded; public string Key=>StrategyKey(Host,Destination); }
-    public PacketEngine(int mode=-1,Func<PacketInfo,int>? strategySelector=null) { forced=mode;this.strategySelector=strategySelector; }
+    private readonly AiRoutes? ai;
+    public PacketEngine(int mode=-1,Func<PacketInfo,int>? strategySelector=null,AiRoutes? ai=null) { forced=mode;this.strategySelector=strategySelector;this.ai=ai; }
     private static int NextMode(int mode)=>mode switch{7=>8,8=>3,3=>0,0=>1,1=>6,6=>5,5=>2,2=>4,_=>7};
-    private static bool IsCloudflare(string host,string ip)=>
+    private static bool IsAnycastOrEdge(string host,string ip)=>
         host.EndsWith("cloudflare.com",StringComparison.OrdinalIgnoreCase)||
         host.EndsWith("cloudflareinsights.com",StringComparison.OrdinalIgnoreCase)||
         host.EndsWith("pages.dev",StringComparison.OrdinalIgnoreCase)||
@@ -55,6 +56,13 @@ internal sealed class PacketEngine : IDisposable
         host.EndsWith("openai.com",StringComparison.OrdinalIgnoreCase)||
         host.EndsWith("oaistatic.com",StringComparison.OrdinalIgnoreCase)||
         host.EndsWith("oaiusercontent.com",StringComparison.OrdinalIgnoreCase)||
+        host.EndsWith("aeza.ru",StringComparison.OrdinalIgnoreCase)||
+        host.EndsWith("aeza.net",StringComparison.OrdinalIgnoreCase)||
+        host.EndsWith("edgecenter.ru",StringComparison.OrdinalIgnoreCase)||
+        host.EndsWith("gcore.com",StringComparison.OrdinalIgnoreCase)||
+        host.EndsWith("gcorelabs.com",StringComparison.OrdinalIgnoreCase)||
+        ip.StartsWith("95.181.176.")||ip.StartsWith("95.181.177.")||ip.StartsWith("95.181.178.")||ip.StartsWith("95.181.179.")||
+        ip.StartsWith("92.223.")||ip.StartsWith("92.38.")||
         ip.StartsWith("104.16.")||ip.StartsWith("104.17.")||ip.StartsWith("104.18.")||ip.StartsWith("104.19.")||
         ip.StartsWith("104.20.")||ip.StartsWith("104.21.")||ip.StartsWith("104.22.")||ip.StartsWith("104.23.")||
         ip.StartsWith("104.24.")||ip.StartsWith("104.25.")||ip.StartsWith("104.26.")||ip.StartsWith("104.27.")||
@@ -144,7 +152,8 @@ internal sealed class PacketEngine : IDisposable
                                 // of one CDN hostname can take different network paths.
                                 bool isTelegramWeb=host.EndsWith("telegram.org",StringComparison.OrdinalIgnoreCase)||host.EndsWith("telegra.ph",StringComparison.OrdinalIgnoreCase)||host.EndsWith("telesco.pe",StringComparison.OrdinalIgnoreCase)||host is "149.154.167.220" or "149.154.167.99" or "149.154.164.13" or "149.154.165.133" or "149.154.165.137" or "149.154.164.24" or "149.154.164.25" or "149.154.175.204" or "149.154.175.205" or "149.154.171.236" or "149.154.171.237";
                                 bool video=VideoEndpoints.IsVideoHost(host)||(host==p.Destination&&VideoEndpoints.IsVideoEndpoint(p.Destination));
-                                int initialMode=isTelegramWeb?3:(video?7:(IsCloudflare(host,p.Destination)?5:3));
+                                bool isAi=(ai?.IsEndpoint(p.Destination)==true)||(ai?.Matches(host)==true);
+                                int initialMode=isTelegramWeb?3:(video?7:(isAi?3:(IsAnycastOrEdge(host,p.Destination)?5:3)));
                                 string key=StrategyKey(host,p.Destination);
                                 int fallback=resetRetries.TryGetValue(key,out var retry)&&retry.Until>DateTime.UtcNow?retry.Mode:initialMode;
                                 int defaultMode=forced>=0?forced:learned.GetValueOrDefault(key,fallback);

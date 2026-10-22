@@ -35,6 +35,8 @@ internal static class ServiceManager
     public static void Install(EngineSettings settings)
     {
         if(!Program.IsAdmin)throw new UnauthorizedAccessException("Administrator required");
+        foreach(string name in new[]{"DPI-Unlocker.exe","WinDivert.dll","WinDivert64.sys","WinDivert-LICENSE.txt"})
+            if(!File.Exists(Path.Combine(AppContext.BaseDirectory,name)))throw new FileNotFoundException("В сборке отсутствует необходимый файл; служба не остановлена: "+name);
         Stop();Directory.CreateDirectory(InstallDir);
         foreach(string name in new[]{"DPI-Unlocker.exe","WinDivert.dll","WinDivert64.sys","WinDivert-LICENSE.txt"})
         {
@@ -50,7 +52,7 @@ internal static class ServiceManager
                 if(!identical)File.Copy(source,target,true);
             }
         }
-        File.WriteAllText(Path.Combine(InstallDir,"settings.json"),JsonSerializer.Serialize(settings));
+        settings.Save(Path.Combine(InstallDir,"settings.json"));
         string command="\""+Path.Combine(InstallDir,"DPI-Unlocker.exe")+"\" --service";
         Sc(WindowsService.GetState()==0?"create":"config",WindowsService.Name,"binPath=",command,"start=","auto","obj=","LocalSystem","DisplayName=","DPI-Unlocker");
         Sc("description",WindowsService.Name,"DPI-Unlocker background packet engine");

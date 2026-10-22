@@ -10,6 +10,10 @@ internal sealed class DnsEngine : IDisposable
     private readonly ConcurrentDictionary<string,byte> pending=new();
     private readonly ConcurrentDictionary<int,Task> operations=new();
     private int next,answered,failed;public event Action<string>? Log;
+    private readonly AiRoutes? ai;
+    private readonly bool useDoh;
+    private readonly int smartDns;
+    public DnsEngine(AiRoutes? ai=null,bool useDoh=true,int smartDns=0){this.ai=ai;this.useDoh=useDoh;this.smartDns=smartDns;}
     public void Run(CancellationToken ct)
     {
         handle=Divert.WinDivertOpen("!loopback and !impostor and udp and (outbound and udp.DstPort == 53)",0,100,0);
@@ -17,9 +21,11 @@ internal sealed class DnsEngine : IDisposable
         using var stop=CancellationTokenSource.CreateLinkedTokenSource(ct);
         using var registration=ct.Register(()=>Divert.WinDivertShutdown(handle,1));
         using var resolver=new DohResolver();resolver.Log+=Emit;
+        using var aiResolver=new AiDnsResolver(smartDns);aiResolver.Log+=Emit;
         DnsFlushResolverCache();
         byte[] buffer=new byte[65535],address=new byte[80];
-        Emit("DNS: прозрачный DoH включён · Cloudflare 1.1.1.1 · без изменения DNS-адаптера");
+        Emit(useDoh?"DNS: прозрачный DoH включён · Cloudflare 1.1.1.1 · без изменения DNS-адаптера":"DNS: прозрачный маршрут нейросетей; остальные запросы без изменений");
+        if(ai?.Enabled==true)Emit("AI_SMART_DNS: Нейросети (ChatGPT / Claude / Gemini) через Smart DNS; HTTP-прокси не настраивается; собственный DoH браузера может обойти этот модуль");
         try
         {
             while(Divert.WinDivertRecv(handle,buffer,(uint)buffer.Length,out uint count,address))
@@ -30,6 +36,8 @@ internal sealed class DnsEngine : IDisposable
                 if(!valid||udpLength<20||udp+udpLength>count){Send(buffer[..(int)count],address);continue;}
                 byte[] query=buffer[(udp+8)..(udp+udpLength)];var question=DnsWire.Question(query);
                 if(question is null||DnsWire.Private(question)||(query[2]&0xf8)!=0){Send(buffer[..(int)count],address);continue;}
+                bool aiQuery=ai?.Matches(question.Name)==true;
+                if(!useDoh&&!aiQuery){Send(buffer[..(int)count],address);continue;}
                 byte[] original=buffer[..(int)count],meta=(byte[])address.Clone();
                 string key=Convert.ToHexString(original.AsSpan(v6?8:12,v6?32:8))+Convert.ToHexString(original.AsSpan(udp,4))+Convert.ToHexString(query);
                 if(pending.Count>=256){Reply(original,meta,udp,v6,DnsWire.Failure(query));continue;}
@@ -42,7 +50,8 @@ internal sealed class DnsEngine : IDisposable
                         byte[] response;
                         try
                         {
-                            response=await resolver.Resolve(query,stop.Token);
+                            response=aiQuery?await aiResolver.Resolve(query,stop.Token):await resolver.Resolve(query,stop.Token);
+                            if(aiQuery)ai?.Observe(response);
                             if(VideoEndpoints.IsVideoHost(question.Name))
                                 foreach(string ip in DnsWire.AddressAnswers(response))
                                     VideoEndpoints.Observe(question.Name,ip);
@@ -62,7 +71,7 @@ internal sealed class DnsEngine : IDisposable
             }
             if(!ct.IsCancellationRequested)throw new Win32Exception(Marshal.GetLastWin32Error(),"DNS recv stopped");
         }
-        finally{stop.Cancel();try{Task.WhenAll(operations.Values).GetAwaiter().GetResult();}catch(OperationCanceledException){}Dispose();}
+        finally{stop.Cancel();try{Task.WhenAll(operations.Values).GetAwaiter().GetResult();}catch(OperationCanceledException){}Dispose();DnsFlushResolverCache();}
     }
     private void Reply(byte[] original,byte[] address,int udp,bool v6,byte[] answer)
     {

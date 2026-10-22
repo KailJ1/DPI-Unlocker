@@ -12,16 +12,16 @@
     <Authors>Kriavpn</Authors>
     <Description>DPI-Unlocker — обход DPI-фильтрации для Windows. Kriavpn. https://kriavpn.ru</Description>
     <Copyright>Copyright © 2026 Kriavpn</Copyright>
-    <Version>1.0.6</Version>
-    <AssemblyVersion>1.0.6.0</AssemblyVersion>
-    <FileVersion>1.0.6.0</FileVersion>
-    <InformationalVersion>1.0.6</InformationalVersion>
+    <Version>1.0.7</Version>
+    <AssemblyVersion>1.0.7.0</AssemblyVersion>
+    <FileVersion>1.0.7.0</FileVersion>
+    <InformationalVersion>1.0.7</InformationalVersion>
     <PackageProjectUrl>https://kriavpn.ru</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="../../native/WinDivert-2.2.2-A/x64/WinDivert.dll" Link="WinDivert.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../../native/WinDivert-2.2.2-A/x64/WinDivert64.sys" Link="WinDivert64.sys" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../../native/WinDivert-2.2.2-A/x64/WinDivert.dll" Link="WinDivert.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="../../native/WinDivert-2.2.2-A/x64/WinDivert64.sys" Link="WinDivert64.sys" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <None Include="../../native/WinDivert-2.2.2-A/LICENSE" Link="WinDivert-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
