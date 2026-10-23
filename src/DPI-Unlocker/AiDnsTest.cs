@@ -7,7 +7,7 @@ internal static class AiDnsTest
     {
         var results=new List<object>();int successes=0;
         using var resolver=new AiDnsResolver(1);using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(40));
-        foreach(string host in new[]{"gemini.google.com","chatgpt.com","claude.ai"})
+        foreach(string host in new[]{"gemini.google.com","chatgpt.com"})
         {
             try
             {

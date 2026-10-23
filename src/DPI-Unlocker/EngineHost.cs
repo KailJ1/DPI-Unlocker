@@ -1,8 +1,8 @@
 using System.Text.Json;
 namespace DPIUnlocker;
-internal sealed record EngineSettings(int Mode=-1,bool Telegram=true,bool Doh=true,bool Quic=false,bool DiscordVoice=true,bool Gemini=false,bool ChatGpt=false,int SmartDns=0,bool Claude=false,bool Ai=false)
+internal sealed record EngineSettings(int Mode=-1,bool Telegram=true,bool Doh=true,bool Quic=false,bool DiscordVoice=true,bool Gemini=false,bool ChatGpt=false,int SmartDns=0,bool Ai=false)
 {
-    public bool EffectiveAi => Ai || Gemini || ChatGpt || Claude;
+    public bool EffectiveAi => Ai || Gemini || ChatGpt;
 
     public void Save(string path)
     {
@@ -12,7 +12,7 @@ internal sealed record EngineSettings(int Mode=-1,bool Telegram=true,bool Doh=tr
     {
         var settings=File.Exists(path)?JsonSerializer.Deserialize<EngineSettings>(File.ReadAllText(path))??new():new();
         if(settings.Mode is < -1 or > 8)throw new InvalidDataException("Invalid strategy in service settings");
-        if(settings.SmartDns is <0 or >2)throw new InvalidDataException("Invalid Smart DNS provider");
+        if(settings.SmartDns is <0 or >3)throw new InvalidDataException("Invalid Smart DNS provider");
         return settings;
     }
 }

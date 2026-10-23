@@ -10,7 +10,6 @@ internal static class ProbeTargets
         new("Discord","DiscordUpdates","https://updates.discord.com"),
         new("AI (Smart DNS)","Gemini","https://gemini.google.com/app"),
         new("AI (Smart DNS)","ChatGPT","https://chatgpt.com/"),
-        new("AI (Smart DNS)","Claude","https://claude.ai/"),
         new("YouTube","YouTubeWeb","https://www.youtube.com"),
         new("YouTube","YouTubeShort","https://youtu.be"),
         new("YouTube","YouTubeImage","https://i.ytimg.com"),

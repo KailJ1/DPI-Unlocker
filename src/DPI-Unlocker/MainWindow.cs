@@ -31,8 +31,8 @@ internal sealed class MainWindow : Form
         modes.Items.AddRange(["Автоматически (по ретрансмитам)","0 · TCP split","1 · Fake SNI + badseq + split","2 · TCP overlap + split","3 · TCP disorder","4 · Пропуск без изменений","5 · Fake SNI + MD5 + badseq","6 · Fake SNI + small badseq","7 · Fake TLS ×6 + MD5 + multisplit","8 · Подмена SNI + MD5 + multidisorder"]); modes.SelectedIndex=0;
         modes.DrawMode=DrawMode.OwnerDrawFixed;
         modes.DrawItem+=(_,e)=>{e.DrawBackground();using var brush=new SolidBrush(e.ForeColor);if(e.Index>=0)e.Graphics.DrawString(modes.Items[e.Index]!.ToString(),modes.Font,brush,e.Bounds);e.DrawFocusRectangle();};
-        smartDns.Items.AddRange(["Smart DNS: автоматически","Smart DNS: Zapret DNS","Smart DNS: Comss.one"]);smartDns.SelectedIndex=0;
-        top.Controls.AddRange([start,stop,tests,modes,quic,telegram,doh,aiServices,smartDns,status,new Label(){Text="Разблокировка нейросетей через Smart DNS (ChatGPT, Claude, Gemini) · без сторонних расширений и прокси",AutoSize=true,Margin=new Padding(6,12,0,0)}]);
+        smartDns.Items.AddRange(["Smart DNS: автоматически","Smart DNS: Zapret DNS","Smart DNS: Comss.one","Smart DNS: GeoHide EU"]);smartDns.SelectedIndex=0;
+        top.Controls.AddRange([start,stop,tests,modes,quic,telegram,doh,aiServices,smartDns,status,new Label(){Text="Разблокировка нейросетей через Smart DNS (ChatGPT, Gemini) · без сторонних расширений и прокси",AutoSize=true,Margin=new Padding(6,12,0,0)}]);
         Controls.Add(output);Controls.Add(top);
         top.Controls.AddRange([installService,removeService,serviceState,about,checkUpdates]);
         about.Click+=(_,_)=>ShowAbout();
@@ -59,7 +59,7 @@ internal sealed class MainWindow : Form
         Add("Ответ TLS ещё не означает загрузку страницы или видео: используйте проверку сайтов.");
     }
     private string SettingsPath=>Path.Combine(AppContext.BaseDirectory,"settings.json");
-    private EngineSettings SelectedSettings()=>new(modes.SelectedIndex-1,telegram.Checked,doh.Checked,quic.Checked,discordVoice,aiServices.Checked,aiServices.Checked,smartDns.SelectedIndex,aiServices.Checked,aiServices.Checked);
+    private EngineSettings SelectedSettings()=>new(modes.SelectedIndex-1,telegram.Checked,doh.Checked,quic.Checked,discordVoice,aiServices.Checked,aiServices.Checked,smartDns.SelectedIndex,aiServices.Checked);
     private void LoadSettings()
     {
         loadingSettings=true;
@@ -92,7 +92,7 @@ internal sealed class MainWindow : Form
     private void ShowAbout()
     {
         using var dialog=new Form(){Text="О DPI-Unlocker",ClientSize=new Size(500,260),StartPosition=FormStartPosition.CenterParent,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false};
-        var info=new Label(){Text="DPI-Unlocker 1.0.7\nОрганизация: Kriavpn\nCopyright © 2026 Kriavpn\n\nОбход DPI-фильтрации для Windows x64.\nРазблокировка нейросетей (ChatGPT, Claude, Gemini).\nДля работы требуются права администратора.",AutoSize=true,Location=new Point(20,20)};
+        var info=new Label(){Text="DPI-Unlocker 1.0.8\nОрганизация: Kriavpn\nCopyright © 2026 Kriavpn\n\nОбход DPI-фильтрации для Windows x64.\nРазблокировка нейросетей (ChatGPT, Gemini).\nДля работы требуются права администратора.",AutoSize=true,Location=new Point(20,20)};
         var site=new LinkLabel(){Text="Сайт: https://kriavpn.ru",AutoSize=true,Location=new Point(20,165)};
         site.LinkClicked+=(_,_)=>{try{Process.Start(new ProcessStartInfo("https://kriavpn.ru"){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(dialog,ex.Message);}};
         var github=new LinkLabel(){Text="Релизы на GitHub: https://github.com/KailJ1/DPI-Unlocker/releases",AutoSize=true,Location=new Point(20,195)};

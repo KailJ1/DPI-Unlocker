@@ -50,16 +50,22 @@ internal static class SelfTests
             Assert(BinaryPrimitives.ReadUInt16BigEndian(fragments[0].AsSpan(6))==0x2000&&BinaryPrimitives.ReadUInt16BigEndian(fragments[1].AsSpan(6))==2,"Discord IPv4 fragment offsets");
             discovery[28]=0xff;Assert(DiscordVoiceEngine.Fragment(discovery).Length==1,"Non-discovery UDP preserved");
             byte[] dns=DnsWire.Query("example.com");Assert(DnsWire.Question(dns)?.Name=="example.com","DNS query parse");
-            var onlyGemini=new AiRoutes(true,false,false);var onlyChat=new AiRoutes(false,true,false);var onlyClaude=new AiRoutes(false,false,true);
+            byte[] smartA=DnsWire.AddressAnswer(dns,"37.221.93.128");
+            Assert(DnsWire.Matches(dns,smartA)&&smartA[0]==dns[0]&&smartA[1]==dns[1]&&DnsWire.AddressAnswers(smartA).SequenceEqual(new[]{"37.221.93.128"}),"Validated Smart DNS address preserves question and transaction ID");
+            foreach(ushort type in new ushort[]{28,64,65})
+            {
+                byte[] queryHint=DnsWire.Query("gemini.google.com",type),emptyHint=DnsWire.AddressAnswer(queryHint,null);
+                Assert(DnsWire.Matches(queryHint,emptyHint)&&emptyHint[7]==0&&emptyHint[9]==0&&emptyHint[11]==0&&(emptyHint[3]&15)==0,"Gemini IPv6/ECH hints cannot bypass validated IPv4 route");
+            }
+            var onlyGemini=new AiRoutes(true,false);var onlyChat=new AiRoutes(false,true);
             Assert(onlyGemini.Matches("GEMINI.GOOGLE.COM")&&onlyGemini.Matches("proactivebackend-pa.googleapis.com")&&onlyGemini.Matches("geminiweb-pa.clients6.google.com")&&!onlyGemini.Matches("gemini.google.com.evil.example")&&!onlyGemini.Matches("www.google.com")&&!onlyGemini.Matches("chatgpt.com"),"Gemini Smart DNS stays on exact domain");
             Assert(onlyChat.Matches("chatgpt.com")&&onlyChat.Matches("auth.openai.com")&&onlyChat.Matches("cdn.oaistatic.com")&&onlyChat.Matches("files.oaiusercontent.com")&&onlyChat.Matches("cdn.platform.openai.com")&&onlyChat.Matches("codex-cloud-backend.chatgpt.com")&&!onlyChat.Matches("notchatgpt.com")&&!onlyChat.Matches("chatgpt.com.evil.example")&&!onlyChat.Matches("api.openai.com")&&!onlyChat.Matches("gemini.google.com"),"ChatGPT Smart DNS domain boundaries and API isolation");
-            Assert(onlyClaude.Matches("claude.ai")&&onlyClaude.Matches("claude.com")&&onlyClaude.Matches("platform.claude.com")&&onlyClaude.Matches("anthropic.com")&&onlyClaude.Matches("api.anthropic.com")&&!onlyClaude.Matches("notclaude.ai")&&!onlyClaude.Matches("gemini.google.com"),"Claude Smart DNS domain boundaries");
-            Assert(!new AiRoutes(false,false,false).Enabled&&!new AiRoutes(false,false,false).Matches("gemini.google.com"),"Disabled Smart DNS preserves existing routes");
+            Assert(!new AiRoutes(false,false).Enabled&&!new AiRoutes(false,false).Matches("gemini.google.com"),"Disabled Smart DNS preserves existing routes");
             var allAi=new AiRoutes(true);
-            Assert(allAi.Enabled&&allAi.Matches("claude.ai")&&allAi.Matches("chatgpt.com")&&allAi.Matches("gemini.google.com"),"Unified AI Smart DNS matches all neural networks");
+            Assert(allAi.Enabled&&!allAi.Matches("claude.ai")&&!allAi.Matches("api.anthropic.com")&&allAi.Matches("chatgpt.com")&&allAi.Matches("gemini.google.com"),"Unified AI Smart DNS matches all neural networks");
             var oldSettings=System.Text.Json.JsonSerializer.Deserialize<EngineSettings>("{\"Mode\":-1,\"Telegram\":true,\"Doh\":true,\"Quic\":false,\"DiscordVoice\":true}")!;
-            Assert(!oldSettings.Gemini&&!oldSettings.ChatGpt&&!oldSettings.Claude&&!oldSettings.Ai&&!oldSettings.EffectiveAi&&oldSettings.SmartDns==0,"Old service settings load with Smart DNS disabled");
-            var aiSettings=oldSettings with{Gemini=true,ChatGpt=true,Claude=true,Ai=true,SmartDns=2};
+            Assert(!oldSettings.Gemini&&!oldSettings.ChatGpt&&!oldSettings.Ai&&!oldSettings.EffectiveAi&&oldSettings.SmartDns==0,"Old service settings load with Smart DNS disabled");
+            var aiSettings=oldSettings with{Gemini=true,ChatGpt=true,Ai=true,SmartDns=2};
             Assert(System.Text.Json.JsonSerializer.Deserialize<EngineSettings>(System.Text.Json.JsonSerializer.Serialize(aiSettings))==aiSettings&&aiSettings.EffectiveAi,"Smart DNS service settings round trip");
             Assert(UpdateChecker.TryParseVersion("v1.0.6",out var v1)&&v1==new Version(1,0,6),"Update version v1.0.6 parse");
             Assert(UpdateChecker.TryParseVersion("1.0.7",out var v2)&&v2==new Version(1,0,7),"Update version 1.0.7 parse");

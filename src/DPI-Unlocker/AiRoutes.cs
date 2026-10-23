@@ -4,15 +4,13 @@ internal sealed class AiRoutes
 {
     private readonly bool gemini;
     private readonly bool chatGpt;
-    private readonly bool claude;
 
-    public AiRoutes(bool ai) : this(ai, ai, ai) { }
+    public AiRoutes(bool ai) : this(ai, ai) { }
 
-    public AiRoutes(bool gemini, bool chatGpt, bool claude = false)
+    public AiRoutes(bool gemini, bool chatGpt)
     {
         this.gemini = gemini;
         this.chatGpt = chatGpt;
-        this.claude = claude;
     }
 
     private static readonly string[] GeminiHostsList =
@@ -44,6 +42,7 @@ internal sealed class AiRoutes
         "codex-cloud-backend.chatgpt.com",
         "codex-cloud-environments.chatgpt.com",
         "cdn.oaistatic.com",
+        "persistent.oaistatic.com",
         "files.oaiusercontent.com",
         "cdn.openai.com",
         "ab.chatgpt.com",
@@ -57,32 +56,13 @@ internal sealed class AiRoutes
         "android.chat.openai.com"
     ];
 
-    private static readonly string[] ClaudeHostsList =
-    [
-        "claude.ai",
-        "claude.com",
-        "platform.claude.com",
-        "anthropic.com",
-        "api.anthropic.com",
-        "assets-proxy.anthropic.com",
-        "assets.anthropic.com",
-        "static.claude.ai",
-        "cdn.claude.ai",
-        "auth.anthropic.com",
-        "support.anthropic.com",
-        "docs.anthropic.com",
-        "console.anthropic.com",
-        "billing.anthropic.com",
-        "feedback.anthropic.com"
-    ];
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> endpoints = new();
 
-    public bool Enabled => gemini || chatGpt || claude;
+    public bool Enabled => gemini || chatGpt;
 
     internal string[] Hosts => (gemini ? GeminiHostsList : Array.Empty<string>())
         .Concat(chatGpt ? ChatGptHostsList : Array.Empty<string>())
-        .Concat(claude ? ClaudeHostsList : Array.Empty<string>())
         .ToArray();
 
     internal void Observe(byte[] answer)
@@ -97,7 +77,7 @@ internal sealed class AiRoutes
         host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
         host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsGeminiHost(string host) =>
+    internal static bool IsGeminiHost(string host) =>
         GeminiHostsList.Any(h => h.Equals(host, StringComparison.OrdinalIgnoreCase));
 
     private static bool IsChatGptHost(string host) =>
@@ -115,13 +95,8 @@ internal sealed class AiRoutes
         host.Equals("ios.chat.openai.com", StringComparison.OrdinalIgnoreCase) ||
         host.Equals("android.chat.openai.com", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsClaudeHost(string host) =>
-        InDomain(host, "claude.ai") ||
-        InDomain(host, "claude.com") ||
-        InDomain(host, "anthropic.com");
 
     internal bool Matches(string host) =>
         gemini && IsGeminiHost(host) ||
-        chatGpt && IsChatGptHost(host) ||
-        claude && IsClaudeHost(host);
+        chatGpt && IsChatGptHost(host);
 }

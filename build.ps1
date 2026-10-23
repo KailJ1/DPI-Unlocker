@@ -28,8 +28,9 @@ try {
 
 $project = Join-Path $projectRoot 'src/DPI-Unlocker/DPI-Unlocker.csproj'
 $output = Join-Path $projectRoot 'dist/DPI-Unlocker'
-& dotnet publish $project -c Release -r win-x64 --self-contained true '-p:PublishSingleFile=true' '-p:DebugType=None' '-p:DebugSymbols=false' -o $output
+& dotnet publish $project -c Release -r win-x64 --self-contained true '-p:PublishSingleFile=true' '-p:IncludeNativeLibrariesForSelfExtract=true' '-p:EnableCompressionInSingleFile=true' '-p:DebugType=None' '-p:DebugSymbols=false' -o $output
 if ($LASTEXITCODE -ne 0) { throw ('dotnet publish failed: ' + $LASTEXITCODE) }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'licenses') -Destination $output -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'THIRD-PARTY-NOTICES.md') -Destination $output -Force
+foreach ($name in @('README.md', 'LICENSE')) { Copy-Item -LiteralPath (Join-Path $projectRoot $name) -Destination $output -Force }
 Write-Output ('Published: ' + $output)

@@ -4,6 +4,20 @@ namespace DPIUnlocker;
 internal sealed record DnsQuestion(string Name,ushort Type,ushort Class,int End);
 internal static class DnsWire
 {
+    internal static byte[] AddressAnswer(byte[] query,string? address,uint ttl=60)
+    {
+        var q=Question(query)??throw new InvalidDataException("Invalid DNS question");
+        byte[] answer=new byte[q.End+(address is null?0:16)];query.AsSpan(0,q.End).CopyTo(answer);
+        BinaryPrimitives.WriteUInt16BigEndian(answer.AsSpan(2),(ushort)(0x8080|(BinaryPrimitives.ReadUInt16BigEndian(query.AsSpan(2))&0x0100)));Array.Clear(answer,6,6);
+        if(address is not null)
+        {
+            byte[] ip=System.Net.IPAddress.Parse(address).GetAddressBytes();if(ip.Length!=4||q.Type!=1)throw new InvalidDataException("Expected IPv4 A answer");
+            answer[7]=1;int p=q.End;
+            new byte[]{0xc0,0x0c,0,1,0,1,0,0,0,0,0,4}.CopyTo(answer,p);
+            BinaryPrimitives.WriteUInt32BigEndian(answer.AsSpan(p+6),ttl);ip.CopyTo(answer,p+12);
+        }
+        return answer;
+    }
     internal static List<string> AddressAnswers(byte[] answer)
     {
         var ips=new List<string>();var q=Question(answer);if(q is null||answer.Length<12)return ips;

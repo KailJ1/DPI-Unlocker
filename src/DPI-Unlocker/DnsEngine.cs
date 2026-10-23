@@ -25,7 +25,7 @@ internal sealed class DnsEngine : IDisposable
         DnsFlushResolverCache();
         byte[] buffer=new byte[65535],address=new byte[80];
         Emit(useDoh?"DNS: прозрачный DoH включён · Cloudflare 1.1.1.1 · без изменения DNS-адаптера":"DNS: прозрачный маршрут нейросетей; остальные запросы без изменений");
-        if(ai?.Enabled==true)Emit("AI_SMART_DNS: Нейросети (ChatGPT / Claude / Gemini) через Smart DNS; HTTP-прокси не настраивается; собственный DoH браузера может обойти этот модуль");
+        if(ai?.Enabled==true)Emit("AI_SMART_DNS: Нейросети (ChatGPT / Gemini) через Smart DNS; HTTP-прокси не настраивается; собственный DoH браузера может обойти этот модуль");
         try
         {
             while(Divert.WinDivertRecv(handle,buffer,(uint)buffer.Length,out uint count,address))
